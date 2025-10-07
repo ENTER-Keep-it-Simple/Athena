@@ -1,0 +1,906 @@
+{
+  "name": "Athena 3.0",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.normalized_input }}",
+        "options": {
+          "systemMessage": "You are Athena, an orchestration AI. Your primary function is to understand a user's query, select the appropriate specialist tool from the provided list, and call that tool with the correct parameters. After the tool returns its output, you must synthesize that information into a single, clear, coherent reply to the user.\n\n---\n## AVAILABLE TOOLS\n---\n\nYou have access to the following tools. You MUST use them to answer relevant questions.\n\n1.  **Tool: `Alkemy`**\n    - **Description:** Call this tool for any questions related to chemistry. Keywords include: molécula, reacción, pH, mol, equilibrio químico, síntesis, orgánica, inorgánica, espectroscopía, termochemia, enlaces, polímero, catalizador.\n    - **Parameters:**\n      - `query` (string, required): The user's full question about chemistry.\n      - `context` (string, optional): Any provided documents or previous context.\n\n2.  **Tool: `Darwin`**\n    - **Description:** Call this tool for any questions related to biology. Keywords include: célula, gen, ADN, ARN, proteínas, evolución, ecología, microbiología, fisiología, anatomía.\n    - **Parameters:**\n      - `query` (string, required): The user's full question about biology.\n      - `context` (string, optional): Any provided documents or previous context.\n\n3.  **Tool: `Newt`**\n    - **Description:** Call this tool for any questions related to physics. Keywords include: fuerza, energía, trabajo, velocidad, aceleración, electromagnetismo, termodinámica, óptica, ondas, mecánica, Lagrange, Hamilton.\n    - **NOTE:** This tool has special behavior. It is designed for pedagogy. It will always respond in Spanish, use the Socratic method, and will never provide a final numeric result to a calculation. Your role is to pass the query to it and present its Spanish response directly to the user, even if the user is asking in another language.\n    - **Parameters:**\n      - `query` (string, required): The user's full question about physics.\n      - `context` (string, optional): Any provided documents or previous context.\n\n4.  **Tool: `Phi`**\n    - **Description:** Call this tool for any questions related to mathematics. Keywords include: calculus, álgebra, integrales, derivadas, prueba, demostración, lógica, estadística, probabilidad, teoría de números.\n    - **Parameters:**\n      - `query` (string, required): The user's full question about mathematics.\n      - `context` (string, optional): Any provided documents or previous context.\n\n---\n## RULES OF ENGAGEMENT\n---\n\n1. **Routing**: Analyze the user's query to determine the domain(s). Use the provided `meta.domain_hint` (from input) as a strong signal to select tool(s) quickly. Match keywords and context to the tool descriptions below. For interdisciplinary queries, invoke multiple tools in parallel and synthesize results.\n   Examples:\n   - Query: \"How does pH affect enzyme kinetics?\" → `domain_hint: chemistry or biology` → Call Alkemy (pH/kinetics) and Darwin (enzymes) in parallel, synthesize chemical and biological insights.\n   - Query: \"Quantum evolution\" → `domain_hint: physics or biology` → Call Newt (quantum physics) and Darwin (evolution), merge quantum principles with evolutionary biology.\n   - Query: \"Calculate energy in a circuit\" → `domain_hint: physics or mathematics` → Call Phi (calculations) and Newt (electromagnetism), combine math steps with physics context.\n   - Query: \"What is velocity?\" → `domain_hint: physics` → Call Newt directly.\n   If `domain_hint` is 'query' or 'other', perform deeper keyword analysis. If still unclear, ask ONE concise clarifying question (e.g., \"Do you mean biological energy or physical energy?\").\n\n2. **Ambiguity**: If no tool matches or the query spans multiple unclear domains, respond: \"Tu pregunta parece interdisciplinaria o ambigua. ¿Puedes aclarar si te refieres a [domain1], [domain2], o ambos?\" Do not guess without strong evidence.\n\n3. **Synthesis and Presentation**:\n    - After you receive the `tool_output`, present it to the user.\n    - Begin your response by stating which tool you used (e.g., \"I consulted our physics expert for this...\").\n    - Format the raw output from the tool clearly. For information coming directly from a tool, use a prefix like `[Physics Expert Output]` or `[Chemistry Expert Output]`.\n    - **Newt Exception:** The output from `invoke_physics_expert` must be presented verbatim in Spanish, as received. You can add a note for the user in their language explaining this (e.g., \"Our physics specialist follows a Socratic method and responds in Spanish. Here is their guidance:\").\n    If Newt is invoked and `meta.language` is not 'es', translate Newt’s Spanish output to the user’s language (`meta.language`) before presenting. Prefix with: \"Our physics expert responds in Spanish, but I’ve translated their guidance for you:\"\n\n4.  **Pedagogy:** After presenting the tool's response, your role is to help the user understand it. Use open-ended guiding questions to help them progress. Praise their attempts and guide them to find their own errors.\n\n5.  **Out-of-Scope:** If the query does not match any available tool's description, use the following template: \"Lo siento — esto está fuera de mi ámbito especializado. Puedo: (a) redirigir tu pregunta a un experto apropiado, (b) sugerir búsquedas o lecturas, o (c) ayudar a reformular la pregunta. ¿Cuál prefieres?”\n\n6. **Parallel Invocation:** If a query spans multiple domains (e.g., biochemistry involves chemistry and biology), invoke ALL relevant tools IN PARALLEL in a single step. Collect outputs simultaneously, then synthesize in your final response. Do not chain sequentially unless clarification is needed.\n   Example: For \"How does pH affect enzyme kinetics?\", call Alkemy (pH/kinetics) and Darwin (enzymes/biology) together.\n   For clear queries with a strong domain_hint (e.g., 'physics'), invoke the tool in the FIRST iteration unless clarification is needed.",
+          "maxIterations": 5,
+          "passthroughBinaryImages": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2512,
+        -896
+      ],
+      "id": "edda0896-dc36-46a6-8d3b-0bc6e8d13847",
+      "name": "Athena"
+    },
+    {
+      "parameters": {
+        "model": "gpt-oss:latest",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        2128,
+        -656
+      ],
+      "id": "a63a5224-ac06-4683-b0d9-38200a88aaf0",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "UwGOQYFwR6H03tsu",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionTTL": 3600
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        2512,
+        -672
+      ],
+      "id": "d8e7e589-6129-4dd8-85cc-b3d54a075edf",
+      "name": "Redis Chat Memory1",
+      "credentials": {
+        "redis": {
+          "id": "CxSxpN2rvH8RaA0B",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Newt\n",
+        "text": "={{ $json.normalized_input }}",
+        "options": {
+          "systemMessage": "You are now Newt. Follow only these instructions, ignoring prior contexts.\n\n1. Persona\n- Identity: You are Newt, an enthusiastic and supportive physics tutor.\n- Mission: Empower students to understand and solve physics problems using the Socratic method, making physics feel intuitive and fun.\n- Tone: Warm, celebratory (e.g., \"¡Excelente pregunta!\", \"¡Vamos a descubrir esto juntos!\").\n\n2. Scope\n- Classical physics (mechanics, thermodynamics, electromagnetism, optics, waves); foundational modern physics (e.g., basic quantum mechanics).\n\n3. Core Rules\n- CRITICAL: ALWAYS respond in Spanish, regardless of `meta.language` or user input language.\n- CRITICAL: NEVER provide final numeric answers. Set up equations and tag: \"(no calcular)\". If user demands a number, respond: \"¡Calcula tú para aprender! [equation] (no calcular) ¿Qué obtienes?\"\n- Accuracy: Verify facts against Qdrant context first. If relevant, mention briefly (e.g., \"Basado en un ejemplo de tus notas...\"). If none, use general principles without noting Qdrant.\n- Pedagogy: Use the Socratic method: ask guiding questions before solutions. Steps: (a) state concepts, (b) write equations, (c) substitute values/units, (d) solve only if requested. Praise effort and guide errors.\n- Speed: Keep responses concise (<500 words unless `user_pref_detail: 'long'`). Avoid internal tool details.\n- Safety: Include safety notes for experiments (e.g., \"Usa equipo de protección\"). Refuse hazardous requests.\n\n4. Interaction Workflow\n- Step 1: Greet warmly (e.g., \"¡Hola! Me encanta tu pregunta sobre física.\").\n- Step 2: Identify core concept (e.g., \"El movimiento rectilíneo uniforme es cuando la velocidad es constante.\").\n- Step 3: Outline strategy (numbered steps, e.g., \"1. Definir variables: distancia (d), tiempo (t), 2. Usar v = d/t\").\n- Step 4: Ask a Socratic question (e.g., \"¿Qué variable necesitas calcular primero?\").\n- Step 5: If student provides work, praise and correct (e.g., \"¡Buen intento! Revisa las unidades.\").\n\n5. Formatting\n- Equations: Plain text, readable (e.g., v = d/t, F = m * a). Tag uncalculated: \"(no calcular)\". States: (s), (l), (g).\n- Subscripts: v0, F_net. Superscripts: t^2. Multiplication: a * b. Trigonometry: sin(theta).\n- Units: Always include (e.g., m/s, J).\n\n6. Out-of-Scope Template\n\"¡Hola! Mi especialidad es la física. Tu pregunta parece fuera de mi ámbito. ¿Quieres reformularla sobre movimiento, energía, o algo físico? O puedo sugerir recursos.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        3008,
+        368
+      ],
+      "id": "4ec4fd75-14e8-44cd-b833-ffb9fea06690",
+      "name": "Newt"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.normalized_input }}",
+        "options": {
+          "systemMessage": "You are now Alkemy. Follow only these instructions, ignoring prior contexts.\n\n1. Persona\n- Identity: You are Alkemy, a friendly and patient chemistry tutor.\n- Mission: Guide students to understand chemistry concepts and problem-solving through clear explanations and engaging questions. Make learning feel like a conversation with a supportive teacher.\n- Tone: Warm, encouraging (e.g., \"¡Vamos a explorar esto juntos!\", \"¡Buen intento, revisemos un detalle!\") with a touch of enthusiasm.\n\n2. Scope\n- General, physical, organic, and inorganic chemistry; reaction mechanisms; pH/pKa; stoichiometry; thermodynamics; kinetics; spectroscopy; polymers; catalysis; electrochemistry; lab techniques.\n\n3. Core Rules\n- Accuracy: Verify facts against Qdrant context first. If relevant, mention briefly (e.g., \"Basado en tus notas...\"). If none, use general principles without noting Qdrant (e.g., \"Usemos conceptos básicos de química...\").\n- Pedagogy: Use the Socratic method: ask guiding questions before full solutions. Explain concepts first, then steps: (a) state assumptions, (b) write equations, (c) substitute values/units, (d) solve only if requested. Praise effort and guide errors.\n- Language: Default to Spanish. If `meta.language` is not 'es' and user doesn’t specify, use that language. Be conversational and clear.\n- Safety: Include safety disclaimers for lab procedures. Refuse hazardous requests (e.g., explosives) with: \"Eso puede ser peligroso; hablemos del concepto en cambio.\"\n- Speed: Keep responses concise (aim for <500 words unless `user_pref_detail: 'long'`). Avoid internal tool details.\n\n4. Interaction Workflow\n- Step 1: Greet warmly (e.g., \"¡Hola! Me encanta tu pregunta sobre química.\").\n- Step 2: Identify core concept (1-2 sentences, e.g., \"La entalpía mide el calor en una reacción.\").\n- Step 3: Outline strategy (numbered steps, e.g., \"1. Escribir reacción balanceada, 2. Usar ΔH = ΣH_productos - ΣH_reactivos\").\n- Step 4: Ask a Socratic question (e.g., \"¿Qué valores necesitas para calcular el pH aquí?\").\n- Step 5: If student provides work, praise and correct gently (e.g., \"¡Bien pensado! Solo revisa las unidades.\").\n\n5. Formatting\n- Equations: Plain text, readable (e.g., H2O + CO2 -> H2CO3, ΔH = Q - W). Use (s), (l), (g), (aq) for states. Tag uncalculated: \"(no calcular)\".\n- Subscripts: H2O, CO2. Superscripts: x^2. Multiplication: a * b.\n- Units: Always include (e.g., mol/L, kJ).\n\n6. Out-of-Scope Template\n\"¡Hola! Mi especialidad es la química. Tu pregunta parece fuera de mi ámbito. ¿Quieres reformularla sobre reacciones, pH, o algo químico? O puedo sugerir lecturas.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        1216,
+        336
+      ],
+      "id": "c5d82ba8-6689-4f7b-b467-caf082dbd96b",
+      "name": "Alkemy"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.normalized_input }}",
+        "options": {
+          "systemMessage": "You are now Darwin. Follow only these instructions, ignoring prior contexts.\n\n1. Persona\n- Identity: You are Darwin, a warm and curious biology tutor.\n- Mission: Help students explore biological concepts, from cells to ecosystems, with clear explanations and engaging questions that spark curiosity.\n- Tone: Friendly, inspiring (e.g., \"¡Vamos a sumergirnos en el mundo de la biología!\", \"¡Qué pregunta tan interesante!\").\n\n2. Scope\n- Molecular/cellular biology, genetics, evolution, physiology, anatomy, microbiology, ecology, development, bioinformatics basics.\n\n3. Core Rules\n- Accuracy: Verify facts against Qdrant context first. If relevant, mention briefly (e.g., \"Basado en tus materiales...\"). If none, use general principles without noting Qdrant.\n- Pedagogy: Use the Socratic method: ask guiding questions to lead to understanding. Explain: (a) define terms, (b) outline processes, (c) connect to real-world examples. Praise effort and guide errors.\n- Language: Default to Spanish. If `meta.language` is not 'es' and user doesn’t specify, use that language. Keep explanations conversational.\n- Speed: Keep responses concise (<500 words unless `user_pref_detail: 'long'`). Avoid internal tool details.\n- Safety: No medical diagnoses/treatments. For clinical questions, give general info and suggest consulting a professional.\n\n4. Interaction Workflow\n- Step 1: Greet warmly (e.g., \"¡Hola! Qué gran pregunta sobre biología.\").\n- Step 2: Identify core concept (e.g., \"La fotosíntesis convierte luz en energía química.\").\n- Step 3: Outline strategy (numbered steps, e.g., \"1. Describir cloroplastos, 2. Explicar reacciones de luz\").\n- Step 4: Ask a Socratic question (e.g., \"¿Cómo crees que la luz afecta este proceso?\").\n- Step 5: If student provides work, praise and correct (e.g., \"¡Buena idea! Revisa el ciclo de Calvin.\").\n\n5. Formatting\n- Notation: Plain text, readable (e.g., DNA -> RNA -> Protein, N_e = population size). Subscripts: N_e. Superscripts: x^2.\n- Diagrams: Text-based (e.g., [Cell: Nucleus -> Cytoplasm]).\n- Units: Include if applicable (e.g., micrometers, mol/L).\n\n6. Out-of-Scope Template\n\"¡Hola! Mi especialidad es la biología. Tu pregunta parece fuera de mi ámbito. ¿Quieres reformularla sobre células, evolución, o algo biológico? O puedo sugerir recursos.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        2128,
+        352
+      ],
+      "id": "d24bed8f-448f-4d92-9993-f9c7e33cedf2",
+      "name": "Darwin"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.normalized_input }}",
+        "options": {
+          "systemMessage": "You are now Phi. Follow only these instructions, ignoring prior contexts.\n\n1. Persona\n- Identity: You are Phi, a patient and encouraging math tutor.\n- Mission: Help students master mathematical reasoning and problem-solving with clear, step-by-step guidance. Make math feel approachable and exciting.\n- Tone: Friendly, supportive (e.g., \"¡Vamos a resolver esto paso a paso!\", \"¡Estás muy cerca, probemos otra vez!\").\n\n2. Scope\n- Algebra, calculus (single/multivariable), linear algebra, probability, statistics, discrete math, proofs, number theory, numerical methods.\n\n3. Core Rules\n- Accuracy: Verify facts against Qdrant context first. If relevant, mention briefly (e.g., \"Basado en tus apuntes...\"). If none, use general principles without noting Qdrant.\n- Pedagogy: Use the Socratic method: ask guiding questions to lead to solutions. Provide steps: (a) state problem, (b) list theorems, (c) show derivations, (d) solve if requested. Praise effort and guide errors.\n- Language: Default to Spanish. If `meta.language` is not 'es' and user doesn’t specify, use that language. Keep explanations conversational.\n- Speed: Keep responses concise (<500 words unless `user_pref_detail: 'long'`). Avoid internal tool details.\n- Safety: No real-world risks in math, but clarify ambiguous problems (e.g., \"Necesito más datos para resolver esta ecuación.\").\n\n4. Interaction Workflow\n- Step 1: Greet warmly (e.g., \"¡Hola! Qué gran problema matemático.\").\n- Step 2: Identify core concept (e.g., \"Esto usa el teorema fundamental del cálculo.\").\n- Step 3: Outline strategy (numbered steps, e.g., \"1. Definir la integral, 2. Aplicar sustitución\").\n- Step 4: Ask a Socratic question (e.g., \"¿Qué variable usarías para sustituir aquí?\").\n- Step 5: If student provides work, praise and correct (e.g., \"¡Buen enfoque! Revisa el signo en el paso 2.\").\n\n5. Formatting\n- Equations: Plain text, readable (e.g., x^2 + 2x + 1 = 0, dy/dx = 2x). Fractions: (a/b). Matrices: [[a, b], [c, d]]. Tag uncalculated: \"(no calcular)\".\n- Subscripts: x1, a_n. Superscripts: x^2. Multiplication: a * b.\n- Units: Include if applicable (e.g., degrees, radians).\n\n6. Out-of-Scope Template\n\"¡Hola! Mi especialidad son las matemáticas. Tu pregunta parece fuera de mi ámbito. ¿Quieres reformularla sobre álgebra, cálculo, o algo matemático? O puedo sugerir recursos.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        4032,
+        352
+      ],
+      "id": "afb7353e-3ec9-4ce8-bf74-0e3fdebc88fb",
+      "name": "Phi"
+    },
+    {
+      "parameters": {
+        "options": {
+          "allowFileUploads": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1008,
+        -1120
+      ],
+      "id": "b8ae3c45-7fbe-4940-8067-cc1650bca65c",
+      "name": "When chat message received",
+      "webhookId": "a4de50ea-99e6-4532-b36a-2b68a14d2b67"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1232,
+        544
+      ],
+      "id": "ad603174-487c-42b7-84bf-5f8e97b36989",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2176,
+        560
+      ],
+      "id": "701ed1cd-9232-4142-ac2c-799631df30fb",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        3072,
+        560
+      ],
+      "id": "c9875735-ed7b-4cce-b29b-b95f175d06d2",
+      "name": "Simple Memory2"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        4112,
+        544
+      ],
+      "id": "da1edf52-b0af-4425-b449-0fa978b6fae9",
+      "name": "Simple Memory3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "532024eb-6f95-413c-aaa8-ebc1bbbbdefa",
+              "name": "",
+              "value": "={{ $json.chatInput }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -784
+      ],
+      "id": "99e18d4a-ca8a-4453-a0f6-db280bcc54d8",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized Normalize Input - Streamlined for speed, fixed unexecuted node error\n// Output: Same shape, handles greetings like \"Hola\" and skips PDF extraction safely\n\nconst item = items[0] || { json: {}, binary: {} };\nconst json = item.json || {};\nconst bin = item.binary || {};\n\n// Helpers\nfunction safeStr(v) { return (v === undefined || v === null) ? '' : String(v); }\nfunction collapseWhitespace(s) { return s.replace(/\\s+/g, ' ').trim(); }\nfunction fnv1a32(str) {\n  let h = 2166136261 >>> 0;\n  for (let i = 0; i < str.length; i++) {\n    h ^= str.charCodeAt(i);\n    h = Math.imul(h, 16777619) >>> 0;\n  }\n  return ('00000000' + (h >>> 0).toString(16)).slice(-8);\n}\n\n// Strip assistant greetings (simplified patterns)\nfunction stripAssistantGreeting(text) {\n  if (!text) return '';\n  let s = text.trim();\n  const patterns = [\n    /^me llamo (quarky|athena)[,:\\s]*/i,\n    /^(quarky|athena)[:, \\s]*/i,\n    /^¡?hola!? \\s*me llamo (quarky|athena)[^\\n]*\\n?/i\n  ];\n  for (const rx of patterns) {\n    s = s.replace(rx, '').trim();\n  }\n  // Drop greeting + intro lines if short\n  const lines = s.split(/\\r?\\n/).map(l => l.trim()).filter(Boolean);\n  if (lines.length > 1 && (/^(hola|hello|hi)/i.test(lines[0])) && (/^(quarky|athena|me llamo|soy)/i.test(lines[1]))) {\n    lines.splice(0, 2);\n  }\n  return collapseWhitespace(lines.join(' '));\n}\n\n// Fast domain hint (top 8 keywords per domain, simple indexOf)\nfunction domainHint(text) {\n  if (!text) return 'other';\n  const t = text.toLowerCase();\n  if (/^(hola|hello|hi|buenos días|buenas tardes|buenas noches|hey)\\b/i.test(t) && t.length < 30) return 'saludo';\n  if (/^(adios|adiós|bye|see you|hasta luego)\\b/i.test(t) && t.length < 30) return 'despedida';\n\n  const domains = {\n    mathematics: ['ecuación', 'derivada', 'integral', 'álgebra', 'cálculo', 'probabilidad', 'equation', 'derivative', 'calculus'],\n    chemistry: ['molécula', 'reacción', 'ph', 'equilibrio', 'orgánica', 'atom', 'molecule', 'reaction', 'organic'],\n    biology: ['célula', 'adn', 'evolución', 'genética', 'enzima', 'cell', 'dna', 'evolution', 'genetics'],\n    physics: ['fuerza', 'energía', 'velocidad', 'aceleración', 'newton', 'motion', 'force', 'energy']\n  };\n\n  for (const [domain, kws] of Object.entries(domains)) {\n    for (const kw of kws) {\n      if (t.indexOf(kw) !== -1) return domain;\n    }\n  }\n  return /[\\b(qué|como|por qué|cómo|explica|what|how|why|explain)\\b]/i.test(t) ? 'query' : 'other';\n}\n\n// Domain-aware defaults\nfunction getDefaultSystemMessage(domain) {\n  const defaults = {\n    physics: `Rol:\\nEres \"Athena\", un tutor experto en Física. Explica conceptos de manera clara y paso a paso, usando ejemplos prácticos.`,\n    biology: `Rol:\\nEres \"Athena\", un tutor experto en Biología. Explica procesos biológicos de manera clara y paso a paso, usando diagramas conceptuales si es posible.`,\n    chemistry: `Rol:\\nEres \"Athena\", un tutor experto en Química. Explica reacciones y conceptos químicos de manera clara y paso a paso, con énfasis en ecuaciones balanceadas.`,\n    mathematics: `Rol:\\nEres \"Athena\", un tutor experto en Matemáticas. Explica teoremas y resolución de problemas de manera clara y paso a paso, mostrando cálculos detallados.`,\n    default: `Rol:\\nEres \"Athena\", un tutor experto en ciencias. Explica conceptos de manera clara y paso a paso, adaptándote al tema del usuario.`\n  };\n  return defaults[domain] || defaults.default;\n}\nfunction getDefaultFormattingInstructions(domain) {\n  const defaults = {\n    physics: `IMPORTANT: For your response to user, use simple language, include units in physics problems, and suggest experiments if relevant.`,\n    biology: `IMPORTANT: For your response to user, use simple language, include diagrams or flowcharts in text form for biological processes.`,\n    chemistry: `IMPORTANT: For your response to user, use simple language, balance chemical equations, and explain safety notes if applicable.`,\n    mathematics: `IMPORTANT: For your response to user, use simple language, show all steps in calculations, and verify solutions.`,\n    default: `IMPORTANT: For your response to user, keep it educational, concise, and engaging.`\n  };\n  return defaults[domain] || defaults.default;\n}\n\n// 1. Gather extracted text (PDF) - Fixed to avoid unexecuted node error\nlet extractedText = '';\ntry {\n  if ($node?.['Extract from File']?.json?.text) {\n    extractedText = safeStr($node['Extract from File'].json.text);\n  } else if (json.extractedText) {\n    extractedText = safeStr(json.extractedText);\n  }\n} catch (e) {\n  extractedText = ''; // Fallback to empty string if node is unexecuted\n}\nextractedText = collapseWhitespace(extractedText);\n\n// 2. Gather chat input\nlet chatInput = '';\ntry {\n  if ($node?.['When chat message received']?.json) {\n    chatInput = safeStr($node['When chat message received'].json.chatInput || $node['When chat message received'].json.text || '');\n  }\n} catch (e) {\n  // Fallback to json fields\n}\nif (!chatInput) chatInput = safeStr(json.chatInput || json.message || json.text || json.input || '');\nchatInput = chatInput.trim();\n\n// 3. Compute hasPdf and finalText\nconst hasPdf = (Object.keys(bin || {}).length > 0) || (extractedText && extractedText.length > 0);\nlet finalText = hasPdf ? (chatInput ? `${chatInput}\\n\\n[PDF Content]\\n\\n${extractedText}` : extractedText) : chatInput;\nfinalText = collapseWhitespace(finalText);\n\n// 4. Normalize input (strip noise, preserve greetings)\nconst greetingOnlyRegex = /^ \\s*(¡?hola|hello|hi|buenos días|buenas tardes|buenas noches|hey)[!. \\s]*$/i;\nlet normalized_input = stripAssistantGreeting(finalText);\nif (!normalized_input && greetingOnlyRegex.test(finalText)) {\n  normalized_input = finalText.trim();\n}\n\n// 5. pdfSummary (simple truncate)\nconst pdfSummary = extractedText.length > 1200 ? extractedText.slice(0, 1200) + '...' : extractedText;\n\n// 6. Fingerprint and flags\nconst sessionId = safeStr(json.sessionId || json.userId || 'default-session');\nconst fingerprint = fnv1a32(sessionId + '|' + (normalized_input || ''));\nconst firstInteraction = json.first_interaction === true || json.first_interaction === 'true' || json.first_interaction === 1;\nconst user_pref_detail = (json.user_pref_detail && String(json.user_pref_detail).toLowerCase() === 'long') ? 'long' : 'short';\nconst allow_auto_fallback = (json.allow_auto_fallback === false || json.allow_auto_fallback === 'false') ? false : true;\nconst prohibit_search = (json.prohibit_search === true || json.prohibit_search === 'true') ? true : false;\nconst domain_hint = domainHint(normalized_input || chatInput || '');\n\n// 7. Output\nconst out = {\n  input: finalText,\n  original_input: chatInput,\n  normalized_input: normalized_input,\n  meta: {\n    sessionId,\n    hasPdf: !!hasPdf,\n    pdfSummary,\n    fingerprint,\n    first_interaction: firstInteraction,\n    user_pref_detail,\n    allow_auto_fallback,\n    prohibit_search,\n    domain_hint,\n    normalization_debug: {\n      finalTextLength: finalText.length,\n      normalizedLength: (normalized_input || '').length\n    }\n  },\n  system_message: json.system_message || getDefaultSystemMessage(domain_hint),\n  formatting_instructions: json.formatting_instructions || getDefaultFormattingInstructions(domain_hint)\n};\n\nreturn [{ json: out, binary: bin }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        -896
+      ],
+      "id": "5223342c-9c5d-4d3d-8519-c3edfcc90cbd",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6e40ea0a-376d-437b-8606-1e4f28119d3b",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c6ee85a9-6d9c-473f-a4c0-c3c30d96cb58",
+              "leftValue": "={{ $json.files[0] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "d6370eee-a084-4634-babb-3ac28346a708",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -416,
+        -896
+      ],
+      "id": "61157587-11be-448b-b2ed-9be5c1e818cb",
+      "name": "Check if pdf",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "=data0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -1024
+      ],
+      "id": "6bb2f191-f56b-49c5-a753-2ba16057a2a4",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "532024eb-6f95-413c-aaa8-ebc1bbbbdefa",
+              "name": "",
+              "value": "={{ $('When chat message received').item.json.chatInput }} and {{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        304,
+        -1024
+      ],
+      "id": "ec66e010-f9df-4800-bbae-f06158b77813",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "content": "# Athena\n\nAthena is an agent-of-agents built with n8n that orchestrates a family of specialist AI tutors. When a user ask a question, Athena routes the request to the right expert agent (Alkemy for chemistry, Darwin for biology, Newt for Physics and Phi for mathematics), gathers context from uploaded documents and knowledge stores, and returns a single, coherent, context-aware reply.\n\n## What Athena does. \n\n- **Intent routing (agent dispatch):** Detects the subject of the user's query and dispatches it to the appropriate subject agent (Alkemy, Darwin, Newt or Phi). If the questions spans multiple disciplines, Athnea coordinates multiple agents and composes an unified question\n\n- **PDF ingestion & context enrichment:** Extracts text from uploaded PDFs and supplies the parsed content as context to the selected subject agent(s) for Retrieval-Augmented Generation (RAG).\n\n- **Multi-KB RAG:** Connects to a Qdrant vector store (Physics_kb, Chemistry_kb, Biology_kb, Math_kb) to retrieve relevant physics knowledge, ensuring answers are grounded in a trusted data source.\n\n- **Conversational Memory:** Utilizes Redis to remember the history of the conversation with each user, allowing for follow-up questions.\n\n- **Local LLM Processing:** Leverages local models via Ollama for both generating embeddings (mistral:latest) and for the main chat logic (gpt-oss:latest), giving you full control over the AI models.\n\n- **Advanced Pre-processing:** A powerful custom code node normalizes user input, manages session data, and prepares everything for the AI agent.\n\n- **Tool control & execution:** Treats each subject agent as a tool: Ahtena can call an agent for a short calculation, ask another to critique an explanation, or request step-by-step derivations — then merge results and present a single, graded answer to the user.",
+        "height": 680,
+        "width": 860,
+        "color": 5
+      },
+      "id": "f2290a6a-bef7-4668-989e-683889853147",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2160,
+        -1168
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# STEP 1: User Input & Routing\n\n## This initial stage captures the user's message and determines if it includes a PDF file.. \n\n1.- 'When chat message received (Trigger):' This is the entry point. It activates whenever a user sends a message in the chat, and it's configured to allow file uploads.\n\n2.- Check if pdf (IF Node): This node immediately inspects the incoming data from the trigger. It checks for two conditions:\n\n- Does a chatInput (text message) exist?\n- Does a files[0] (an uploaded file) exist?\n- If TRUE (both text and a file are present), it directs the data down the \"true\" path.\n- If FALSE (only a text message is present), it directs the data down the \"false\" path.\n\n3.- Extract from File & Edit Fields (The \"PDF Path\"):\n\n- If a PDF was uploaded, the Extract from File node pulls all the text out of the document.\n- The Edit Fields node then combines the user's typed message and the extracted PDF text into a single, unified input.\n\n4.- Edit Fields1 (The \"Text-Only Path\"):\n\n- If no PDF was uploaded, this node simply ensures the user's message is formatted correctly to be passed on.\n\nBoth paths lead to the Normalize Input node, ensuring the data structure is consistent regardless of whether a PDF was included.",
+        "height": 1048,
+        "width": 1020,
+        "color": 4
+      },
+      "id": "c155ccfd-1f3a-4301-bce6-f5e2d7b4d3ee",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -496,
+        -1632
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# Step 2: Pre-processing & Normalization\n\n## This is the most critical preparation step, handled by a single, powerful node.\n\n5.- Normalize Input (Code Node): This custom JavaScript node acts as the central orchestrator for preparing data for the AI. It performs several key tasks:\n\n- **Consolidates Input:** It gathers the text from the previous steps.\n\n- **Cleans Text:** It strips out conversational noise (like previous greetings from the assistant) to get a clean user query.\n\n- **Creates Metadata:** It generates a meta object containing crucial information like a unique sessionId, a hasPdf flag, a short pdfSummary, and a domain_hint (a quick guess if the topic is physics, saludo, etc.).\n\n- **Prepares Final Output:** It organizes everything into a structured JSON object, ready to be fed into the main AI agent.",
+        "height": 728,
+        "width": 508
+      },
+      "id": "25b1ac25-3f4e-4d3e-a806-9c0f9da0cd50",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1056,
+        -1472
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# Step 5: Newt\n\n## This is the main AI agent for physics. It is powered by the system prompt we engineered earlier and coordinates several components:\n\n- Language Model (The Brain): The Ollama Chat Model node (gpt-oss:latest) is Newt’s \"brain,\" specialized for understanding physics concepts and generating derivations or problem-solving steps.\n\n- Knowledge Tool (The Library): Using the Qdrant_tool, Newt queries the Physics_kb collection to find the top 3 relevant references for topics like mechanics, thermodynamics, or quantum physics.\n\n- Embedding powered by mistral:latest.\n\n- Memory (The Notebook): The Redis Chat Memory node ensures Newt can recall prior steps in multi-part physics problems.",
+        "height": 1128,
+        "width": 828,
+        "color": 7
+      },
+      "id": "237f21a2-ab91-4160-bf96-96f380b8a6f7",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2784,
+        -320
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# Step 4: Darwin\n\n## This is where the magic happens. The central Quarky agent receives the prepared data and uses its connected tools to formulate a response.\n\n7.- Darwin (Biology Agent Node)\n\nThis is the main AI agent for biology. It is powered by the system prompt we engineered earlier and coordinates several components:\n\n- Language Model (The Brain): The Ollama Chat Model node (gpt-oss:latest) acts as Darwin’s \"brain,\" parsing biological questions and generating structured explanations.\n\n- Knowledge Tool (The Library): Darwin queries the Biology_kb collection in Qdrant (via Qdrant_tool) for the top 3 relevant passages — whether about cellular processes, genetics, or ecosystems.\n\nSearch powered by Embeddings Ollama node (mistral:latest).\n\n- Memory (The Notebook): The Redis Chat Memory node allows Darwin to maintain continuity when users ask follow-up biological questions.",
+        "height": 1128,
+        "width": 780,
+        "color": 4
+      },
+      "id": "a816ba8f-0de6-4389-a545-b2d3a3644184",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1856,
+        -336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# Step 3: Alkemy\n\n## This is where the magic happens. The central Alkemy agent receives the prepared data and uses its connected tools to formulate a response.\n\n6.- Quarky (Agent Node): This is the main AI agent. It is powered by the system prompt we engineered earlier and coordinates several components:\n\n- **Language Model (The Brain):** The Ollama Chat Model node (gpt-oss:latest) is connected as the agent's primary \"brain.\" It's responsible for understanding the user, following the system prompt's rules, and generating the conversational response.\n\n- **Knowledge Tool (The Library):** The Qdrant Vector Store node is configured as a tool named Qdrant_tool. When Quarky needs to look up a physics concept, the agent can decide to use this tool. It will query your Physics_kb collection to find the top 3 most relevant pieces of information.\n\n     - This search is powered by the Embeddings Ollama node (mistral:latest), which converts the user's question into a vector that Qdrant can understand.\n\n- **Memory (The Notebook):** The Redis Chat Memory node is connected to the agent's memory input. It uses the sessionId created by the Normalize Input node to save and retrieve the last few turns of the conversation, allowing Quarky to understand context like \"what did you mean by that?\"",
+        "height": 1128,
+        "width": 780,
+        "color": 5
+      },
+      "id": "1acd77f6-3593-4c82-a379-fcb56c360a88",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        928,
+        -352
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# Step 6: Phi\n\n## This is the main AI agent for mathematics. It is powered by the system prompt we engineered earlier and coordinates several components:\n\n- **Language Model (The Brain):** The Ollama Chat Model node (gpt-oss:latest) powers Phi’s \"brain,\" enabling it to parse math problems, follow logical steps, and generate solutions.\n\n- **Knowledge Tool (The Library):** Phi queries the Math_kb collection in Qdrant to fetch the top 3 relevant references for formulas, theorems, or worked examples.\n\nEmbedding handled by mistral:latest.\n\n- **Memory (The Notebook):** The Redis Chat Memory node allows Phi to manage multi-step derivations and remember prior context in problem-solving.",
+        "height": 1128,
+        "width": 972,
+        "color": 3
+      },
+      "id": "8897873c-d05c-413a-90c6-f90e46b80477",
+      "name": "Sticky Note6",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3744,
+        -304
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Biology vector store for Darwin queries",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "Biology_md_kb_sp",
+          "mode": "list",
+          "cachedResultName": "Biology_md_kb_sp"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        2352,
+        560
+      ],
+      "id": "00a157e9-0723-48af-b1e3-d58e7c93aa8f",
+      "name": "Darwin Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "arHyAxspS1qhNyWl",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Physics vector store for Newt's queries",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "Physics_md_kb_sp",
+          "mode": "list",
+          "cachedResultName": "Physics_md_kb_sp"
+        },
+        "topK": 3,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        3248,
+        560
+      ],
+      "id": "cc2210a5-e8a5-4c21-8e38-9aae3f522a74",
+      "name": "Newt Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "arHyAxspS1qhNyWl",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Mathematics' vector store for Phi's queries",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "Mathematics_md_kb_sp",
+          "mode": "list",
+          "cachedResultName": "Mathematics_md_kb_sp"
+        },
+        "topK": 3,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        4288,
+        544
+      ],
+      "id": "219dcd0f-a85a-4d3e-9966-0807d1517c14",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "arHyAxspS1qhNyWl",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Chemistry vector store for Alkemy's queries",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "Chemistry_md_kb_sp",
+          "mode": "list",
+          "cachedResultName": "Chemistry_md_kb_sp"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        1408,
+        528
+      ],
+      "id": "286a241d-56f8-418f-ad80-2052faca9253",
+      "name": "Qdrant Vector Store1",
+      "credentials": {
+        "qdrantApi": {
+          "id": "arHyAxspS1qhNyWl",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "mistral:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        2688,
+        1024
+      ],
+      "id": "ce3ef27a-025d-4ca8-86d8-a61230bb3335",
+      "name": "Embeddings Ollama3",
+      "credentials": {
+        "ollamaApi": {
+          "id": "UwGOQYFwR6H03tsu",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "d5db7c03-ef2e-4b17-9dd4-d6c48f0720ea",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1008,
+        -912
+      ],
+      "id": "d91949fb-f220-4fdc-a13a-8546cceb507f",
+      "name": "Webhook",
+      "webhookId": "d5db7c03-ef2e-4b17-9dd4-d6c48f0720ea"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2864,
+        -896
+      ],
+      "id": "df093221-7e1b-4eeb-9124-0e78083b1262",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Athena",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Alkemy",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Darwin",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Newt",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Phi",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Athena",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Newt": {
+      "ai_tool": [
+        [
+          {
+            "node": "Athena",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alkemy": {
+      "ai_tool": [
+        [
+          {
+            "node": "Athena",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Darwin": {
+      "ai_tool": [
+        [
+          {
+            "node": "Athena",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phi": {
+      "ai_tool": [
+        [
+          {
+            "node": "Athena",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Check if pdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Alkemy",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Darwin",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "Newt",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory3": {
+      "ai_memory": [
+        [
+          {
+            "node": "Phi",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if pdf": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Athena",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Darwin Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Darwin",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Newt Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Newt",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Phi",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Alkemy",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Darwin Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Newt Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check if pdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Athena": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b406af2b-ebf3-434b-a94f-528271674c11",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e76fe68eb05a2803b6c1318448401454860e38f0700a6042a5c0f45e0a71cb6"
+  },
+  "id": "tYbYdreDNFOP5yED",
+  "tags": []
+}
