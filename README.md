@@ -33,7 +33,7 @@ Before you begin, ensure you have the following services running and accessible 
 
 1.  **Clone the Repository:**
     ```bash
-    git clone <[repository-url](https://github.com/ENTER-Keep-it-Simple/Athena.git)>
+    git clone [repository-url](https://github.com/ENTER-Keep-it-Simple/Athena.git)
     cd athena-3.0
     ```
 
