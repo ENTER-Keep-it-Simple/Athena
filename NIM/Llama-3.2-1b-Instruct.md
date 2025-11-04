@@ -12,3 +12,9 @@ This guide includes all correct and missing steps to avoid hours of debugging.
 | StorageClass (ReadWriteMany or local)  | e.g., ocs-storagecluster-cephfs or hostpath  |
 | NGC API Key  | nvapi-... from https://ngc.nvidia.com/setup  |
 | Model Access  | Accept license at https://build.nvidia.com/meta/llama-3.2-1b-instruc  |
+
+## Step 1: Create Namespace
+```oc command
+oc create namespace llama-nim-project
+```
+
