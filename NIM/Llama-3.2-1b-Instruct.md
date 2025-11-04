@@ -32,7 +32,8 @@ spec:
   resources:
     requests:
       storage: 30Gi
-  storageClassName: ocs-storagecluster-cephfs  # CHANGE TO YOUR STORAGECLASS```
+  storageClassName: ocs-storagecluster-cephfs  # CHANGE TO YOUR STORAGECLASS
+```
 
 ```oc command
 oc apply -f pvc.yaml
