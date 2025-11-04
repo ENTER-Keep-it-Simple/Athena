@@ -38,3 +38,22 @@ spec:
 ```oc command
 oc apply -f pvc.yaml
 ```
+
+## Step 3: Create Secrets (CORRECT FORMAT)
+
+### 3.1 NGC API Key (Model Download)
+```oc command
+oc create secret generic ngc-api-secret \
+  --namespace=llama-nim-project \
+  --from-literal=NGC_API_KEY=<YOUR_API_KEY>
+```
+### 3.2 Docker Registry Secret (Image Pull)
+```oc command
+oc create secret docker-registry ngc-registry-secret \
+  --namespace=llama-nim-project \
+  --docker-server=nvcr.io \
+  --docker-username='$oauthtoken' \ # Specified in NGC  model's deploy tab
+  --docker-password=<YOUR_API_KEY> \
+  --dry-run=client -o yaml | oc apply -f -
+```
+
