@@ -18,3 +18,18 @@ This guide includes all correct and missing steps to avoid hours of debugging.
 oc create namespace llama-nim-project
 ```
 
+## Step 2: Create PersistentVolumeClaim (PVC)
+```yaml
+# pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: llama-3-2-1b-instruct-pvc
+  namespace: llama-nim-project
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 30Gi
+  storageClassName: ocs-storagecluster-cephfs  # CHANGE TO YOUR STORAGECLASS```
