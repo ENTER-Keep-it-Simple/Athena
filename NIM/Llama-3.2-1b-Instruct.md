@@ -57,3 +57,75 @@ oc create secret docker-registry ngc-registry-secret \
   --dry-run=client -o yaml | oc apply -f -
 ```
 
+## Step 4: Deploy NIMService (GUI-Validated YAML)
+
+```yaml
+# nim-service.yaml
+apiVersion: apps.nvidia.com/v1alpha1
+kind: NIMService
+metadata:
+  name: llama-3-2-1b-instruct
+  namespace: llama-nim-project
+spec:
+  image:
+    repository: nvcr.io/nim/meta/llama-3.2-1b-instruct
+    tag: latest
+    pullPolicy: IfNotPresent
+    pullSecrets:
+      - ngc-registry-secret   # ← STRING ONLY
+  authSecret: ngc-api-secret
+  resources:
+    limits:
+      nvidia.com/gpu: "1"
+      cpu: "4"
+      memory: "16Gi"
+    requests:
+      nvidia.com/gpu: "1"
+      cpu: "4"
+      memory: "16Gi"
+  storage:
+    pvc:
+      create: false
+      name: llama-3-2-1b-instruct-pvc
+```
+
+```oc command
+oc apply -f nim-service.yaml
+```
+
+## Step 5: Wait for Model Initialization
+```oc command
+oc get pods -n llama-nim-project -w
+```
+
+Status progression
+```text
+Pending → ContainerCreating → Running (10–20 min)
+```
+
+Wait for:
+```text
+[INFO] Server ready at http://0.0.0.0:8000
+```
+
+## Step 6: Expose & Test
+### Port-forward:
+```oc command
+oc port-forward svc/llama-3-2-1b-instruct 8000:8000 -n llama-nim-project
+```
+
+### Test models:
+```bash
+curl http://localhost:8000/v1/models
+```
+
+### Test Inference:
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta/llama-3.2-1b-instruct",
+    "messages": [{"role": "user", "content": "Hello in 3 words."}],
+    "max_tokens": 10
+  }'
+```
