@@ -152,7 +152,7 @@ curl http://localhost:8000/v1/models  # May return 404; use health checks
 Predict Structure (Main Endpoint)
 POST /biology/openfold/openfold3/predict
 Request Body (JSON):
-```oc command
+```json
 {
   "request_id": "my_prediction",
   "inputs": [
@@ -174,6 +174,26 @@ Request Body (JSON):
         }
       ],
       "output_format": "pdb"
+    }
+  ]
+}
+```
+Response (JSON):
+```json
+{
+  "request_id": "my_prediction",
+  "outputs": [
+    {
+      "input_id": "protein1",
+      "structures_with_scores": [
+        {
+          "structure": "ATOM      1  N   MET A   1      10.000  20.000  30.000 ...",
+          "format": "pdb",
+          "confidence_score": 0.95,
+          "plddt": [95.1, 96.3, ...],
+          "pae": [[0.0, 1.2, ...], ...]
+        }
+      ]
     }
   ]
 }
