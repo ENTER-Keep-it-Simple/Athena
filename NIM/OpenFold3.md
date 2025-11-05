@@ -26,4 +26,7 @@ Prerquisites.
 - Access: Accept model license at build.nvidia.com/openfold/openfold3.
 
 Veify GPU:
-
+```oc command
+oc describe node <gpu-node> | grep nvidia.com/gpu
+# Expected: Allocatable: 1
+```
