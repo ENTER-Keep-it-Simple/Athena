@@ -130,3 +130,51 @@ Verify model cached:
 oc exec -n openfold3-nim-project $(oc get pod -l app.kubernetes.io/name=openfold3 -n openfold3-nim-project -o name) -- df -h /model-store
 # ~40GB used = success
 ```
+
+## Step 6: Expose Service
+```oc command
+oc port-forward svc/openfold3 8000:8000 -n openfold3-nim-project
+```
+
+For production route:
+```oc command
+oc create route passthrough openfold-route --service=openfold3 --port=8000 -n openfold3-nim-project
+```
+
+## Step 7: API Reference
+OpenFold3 uses biology-specific endpoints (OpenAI-compatible base).
+
+List Models (Optional)
+```oc command
+curl http://localhost:8000/v1/models  # May return 404; use health checks
+```
+
+Predict Structure (Main Endpoint)
+POST /biology/openfold/openfold3/predict
+Request Body (JSON):
+```oc command
+{
+  "request_id": "my_prediction",
+  "inputs": [
+    {
+      "input_id": "protein1",
+      "molecules": [
+        {
+          "type": "protein",
+          "id": "A",
+          "sequence": "MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG",
+          "msa": {
+            "main_db": {
+              "csv": {
+                "alignment": "key,sequence\n-1,MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG",
+                "format": "csv"
+              }
+            }
+          }
+        }
+      ],
+      "output_format": "pdb"
+    }
+  ]
+}
+```
