@@ -75,3 +75,58 @@ spec:
 oc apply -f openfold-pvc.yaml
 oc get pvc -n openfold3-nim-project  # Wait for Bound
 ```
+
+## Step 4: Deploy NIMService
+```yaml
+# openfold-nim.yaml
+apiVersion: apps.nvidia.com/v1alpha1
+kind: NIMService
+metadata:
+  name: openfold3
+  namespace: openfold3-nim-project
+spec:
+  image:
+    repository: nvcr.io/nim/openfold/openfold3
+    tag: latest
+    pullPolicy: IfNotPresent
+    pullSecrets:
+      - ngc-registry-secret
+  authSecret: ngc-api-secret
+  resources:
+    limits:
+      nvidia.com/gpu: "1"
+      cpu: "6"
+      memory: "32Gi"
+    requests:
+      nvidia.com/gpu: "1"
+      cpu: "6"
+      memory: "32Gi"
+  storage:
+    pvc:
+      create: false
+      name: openfold3-pvc
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - sno  # Your GPU node
+```
+
+```oc command
+oc apply -f openfold-nim.yaml
+```
+
+## Step 5: Monitor Deployment
+```oc command
+oc get pods -n openfold3-nim-project -w
+oc logs -n openfold3-nim-project -f $(oc get pod -l app.kubernetes.io/name=openfold3 -n openfold3-nim-project -o name)
+```
+Verify model cached:
+```oc command
+oc exec -n openfold3-nim-project $(oc get pod -l app.kubernetes.io/name=openfold3 -n openfold3-nim-project -o name) -- df -h /model-store
+# ~40GB used = success
+```
