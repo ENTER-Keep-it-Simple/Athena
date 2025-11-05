@@ -53,3 +53,25 @@ oc create secret docker-registry ngc-registry-secret \
   --docker-password=$NVAPI_KEY \
   --dry-run=client -o yaml | oc apply -f -
 ```
+
+## Step 3: Create PersistentVolumeClaim (PVC)
+```yaml
+# openfold-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openfold3-pvc
+  namespace: openfold3-nim-project
+spec:
+  accessModes:
+    - ReadWriteOnce  # For local-registry
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: local-registry  # Or ocs-storagecluster-cephfs for shared
+```
+
+```oc command
+oc apply -f openfold-pvc.yaml
+oc get pvc -n openfold3-nim-project  # Wait for Bound
+```
