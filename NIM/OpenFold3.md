@@ -14,3 +14,16 @@ Key Features:
 - API: OpenAI-compatible endpoints for biology tasks.
 
 This documentation is derived from NVIDIA's official NIM Operator and OpenFold3 deploy guide, adapted for OpenShift with RTX 4000 Ada GPU examples.
+
+Prerquisites.
+
+- NVIDIA GPU: Ada Lovelace or newer (e.g., RTX 4000 Ada with 20GB VRAM; sufficient for small-medium proteins).
+- OpenShift Cluster: Version 4.12+ with NVIDIA GPU Operator installed (driver 535+).
+- NIM Operator: Installed via OperatorHub (v1.0+).
+- NGC Account: API key with OpenFold3 entitlement .
+- Storage: Shared RWX StorageClass (e.g., ocs-storagecluster-cephfs) or local (RWO for single-node).
+- Resources: 1 GPU, 6–8 CPU, 32Gi RAM, 50Gi+ storage (model ~40GB).
+- Access: Accept model license at build.nvidia.com/openfold/openfold3.
+
+Veify GPU:
+
