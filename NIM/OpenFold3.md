@@ -30,3 +30,26 @@ Veify GPU:
 oc describe node <gpu-node> | grep nvidia.com/gpu
 # Expected: Allocatable: 1
 ```
+
+## Step 1: Create Namespace
+```oc command
+oc new-project openfold3-nim-project
+```
+## Step 2: Create Secrets
+```oc command and bash
+# Replace with your nvapi-... key
+NVAPI_KEY=<YOUR_NVAPI_KEY>
+
+# API Key Secret (model download)
+oc create secret generic ngc-api-secret \
+  --namespace=openfold3-nim-project \
+  --from-literal=NGC_API_KEY=$NVAPI_KEY
+
+# Docker Registry Secret (nvcr.io pull)
+oc create secret docker-registry ngc-registry-secret \
+  --namespace=openfold3-nim-project \
+  --docker-server=nvcr.io \
+  --docker-username=oauth2 \
+  --docker-password=$NVAPI_KEY \
+  --dry-run=client -o yaml | oc apply -f -
+```
